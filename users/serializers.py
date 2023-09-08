@@ -52,7 +52,7 @@ class CreateUserSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
-        fields = ("email", "password")
+        fields = ("email", "name", "profileImg", "gender", "nickname")
 
 
 class SearchUserSerializer(serializers.ModelSerializer):
