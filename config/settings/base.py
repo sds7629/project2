@@ -52,6 +52,11 @@ THIRDPARTY_APPS = [
     "debug_toolbar",
     "users.apps.UsersConfig",
     "django_filters",
+    "feeds.apps.FeedsConfig",
+    "reviews.apps.ReviewsConfig",
+    "replies.apps.RepliesConfig",
+    "common.apps.CommonConfig",
+    "categories.apps.CategoriesConfig",
 ]
 
 DEFAULT_APPS = [

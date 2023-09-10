@@ -106,14 +106,3 @@ class UserViewSet(viewsets.ModelViewSet):
             request.user.is_active = False
             request.user.save()
             return Response({"message": "회원탈퇴 완료"}, status=status.HTTP_404_NOT_FOUND)
-
-
-# @api_view(["DELETE"])
-# @permission_classes([IsAuthenticated, permissions.IsYour])
-# def signout(request):
-#     instance = get_user_model().objects.get(pk=pk)
-#     if instance == request.user:
-#         instance.is_active = False
-#         return Response({"message": "회원탈퇴 완료"}, status=status.HTTP_404_NOT_FOUND)
-#     else:
-#         raise PermissionError
