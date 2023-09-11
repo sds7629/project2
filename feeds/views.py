@@ -1,12 +1,15 @@
 from .models import Feed
 from rest_framework import viewsets
 from rest_framework.response import Response
+from rest_framework.generics import get_object_or_404
 from rest_framework.exceptions import NotFound, ParseError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from categories.models import Category
+from reviews.models import Review
+from reviews.serializers import ReviewSerializer
 from . import serializers
-from .permissions import IsWriterorReadOnly
+from .permissions import IsWriterorReadOnly, OnlyoneReview
 from .pagination import CustomPagination
 from .filters import FeedFilter
 
@@ -44,6 +47,32 @@ class FeedViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(feed)
         return Response(serializer.data)
 
-    def destroy(self, request, *args, **kwargs):
-        self.get_object()
-        return super().destroy(request, *args, **kwargs)
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    queryset = Review.objects.select_related("feed").all()
+    serializer_class = ReviewSerializer
+    permission_classes = [OnlyoneReview]
+
+    def get_object(self, *args, **kwargs):
+        queryset = Feed.objects.all()
+        lookup_url_kwarg = "feed_pk"
+        print(self.kwargs[lookup_url_kwarg])
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        obj = get_object_or_404(queryset, **filter_kwargs)
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def list(self, request, *args, **kwargs):
+        feed = self.get_object()
+        review = feed.reviews.all()
+        return Response(ReviewSerializer(review, many=True).data)
+
+    def create(self, request, *args, **kwargs):
+        feed = self.get_object()
+        serializer = ReviewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        review_data = serializer.save(
+            writer=request.user,
+            feed=feed,
+        )
+        return Response(ReviewSerializer(review_data).data)
