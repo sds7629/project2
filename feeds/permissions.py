@@ -29,10 +29,7 @@ class OnlyoneReview(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         if request.user.is_authenticated:
-            print(obj.reviews.filter(writer=request.user))
-            if obj.reviews.filter(writer=request.user).exists():
-                raise ParseError("이미 리뷰를 작성하셨습니다.")
-            elif request.user == obj.writer or request.user.is_superuser:
+            if request.user == obj.writer or request.user.is_superuser:
                 return True
             else:
                 return True

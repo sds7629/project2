@@ -71,8 +71,11 @@ class ReviewViewSet(viewsets.ModelViewSet):
         feed = self.get_object()
         serializer = ReviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        review_data = serializer.save(
-            writer=request.user,
-            feed=feed,
-        )
-        return Response(ReviewSerializer(review_data).data)
+        if not feed.reviews.filter(writer=request.user).exists():
+            review_data = serializer.save(
+                writer=request.user,
+                feed=feed,
+            )
+            return Response(ReviewSerializer(review_data).data)
+        else:
+            raise ParseError("이미 리뷰를 작성했습니다.")
