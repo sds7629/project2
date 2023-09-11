@@ -9,7 +9,7 @@ from categories.models import Category
 from reviews.models import Review
 from reviews.serializers import ReviewSerializer
 from . import serializers
-from .permissions import IsWriterorReadOnly, OnlyoneReview
+from .permissions import IsWriterorReadOnly
 from .pagination import CustomPagination
 from .filters import FeedFilter
 
@@ -51,24 +51,36 @@ class FeedViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.select_related("feed").all()
     serializer_class = ReviewSerializer
-    permission_classes = [OnlyoneReview]
+    permission_classes = [IsWriterorReadOnly]
 
-    def get_object(self, *args, **kwargs):
+    def get_feed_object(self, *args, **kwargs):
         queryset = Feed.objects.all()
         lookup_url_kwarg = "feed_pk"
-        print(self.kwargs[lookup_url_kwarg])
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        obj = get_object_or_404(queryset, **filter_kwargs)
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def get_review_object(self, *args, **kwargs):
+        queryset = self.get_queryset()
+        lookup_url_kwarg = "pk"
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         obj = get_object_or_404(queryset, **filter_kwargs)
         self.check_object_permissions(self.request, obj)
         return obj
 
     def list(self, request, *args, **kwargs):
-        feed = self.get_object()
+        feed = self.get_feed_object()
         review = feed.reviews.all()
         return Response(ReviewSerializer(review, many=True).data)
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_review_object()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
     def create(self, request, *args, **kwargs):
-        feed = self.get_object()
+        feed = self.get_feed_object()
         serializer = ReviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         if not feed.reviews.filter(writer=request.user).exists():

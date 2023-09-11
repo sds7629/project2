@@ -14,9 +14,16 @@ from . import serializers
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = get_user_model().objects.all()
-    serializer_class = serializers.UserSerializer
     filterset_fields = ("nickname",)
     permission_classes = [AllowAny]
+
+    def get_serializer(self, *args, **kwargs):
+        if self.action in ["list"]:
+            serializer_class = serializers.ListUserSerializer
+        else:
+            serializer_class = serializers.UserSerializer
+        kwargs.setdefault("context", self.get_serializer_context())
+        return serializer_class(*args, **kwargs)
 
     def update(self, request, *args, **kwargs):
         raise MethodNotAllowed(request.method)

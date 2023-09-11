@@ -4,6 +4,20 @@ from .models import User
 from feeds.serializers import FeedSerializer
 
 
+class ListUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        exclude = (
+            "created_at",
+            "updated_at",
+            "is_superuser",
+            "is_active",
+            "password",
+            "groups",
+            "user_permissions",
+        )
+
+
 class UserSerializer(serializers.ModelSerializer):
     feed = serializers.SerializerMethodField()
 
