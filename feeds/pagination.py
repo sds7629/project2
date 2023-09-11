@@ -9,9 +9,10 @@ class CustomPagination(PageNumberPagination):
     page_size_query_param = "page_size"
 
     def paginate_queryset(self, queryset, request, view=None):
-        page_size = self.get_page_size(request)
-        if not page_size:
-            return 10
+        # page_size = self.get_page_size(request)
+        # if not page_size:
+        #     return None
+        page_size = 5
 
         paginator = self.django_paginator_class(queryset, page_size)
         page_number = request.query_params.get(self.page_query_param, 1)

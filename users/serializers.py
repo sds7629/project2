@@ -1,9 +1,16 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import User
+from feeds.serializers import FeedSerializer
 
 
 class UserSerializer(serializers.ModelSerializer):
+    feed = serializers.SerializerMethodField()
+
+    def get_feed(self, instance):
+        user = get_user_model().objects.get(nickname=instance.nickname)
+        return FeedSerializer(user.feeds.all(), many=True).data
+
     class Meta:
         model = get_user_model()
         exclude = (

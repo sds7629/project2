@@ -9,11 +9,13 @@ class Review(Common):
         on_delete=models.CASCADE,
         null=False,
         blank=False,
+        related_name="reviews",
     )
     feed = models.ForeignKey(
         "feeds.Feed",
         on_delete=models.CASCADE,
         null=False,
         blank=False,
+        related_name="reviews",
     )
     content = models.TextField()

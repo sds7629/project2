@@ -23,8 +23,8 @@ def CategoryView(request):
 
 @api_view(["PUT", "DELETE"])
 @permission_classes([IsAdminUser])
-def DetailCategoryView(request, name):
-    category = Category.objects.get(name=name)
+def DetailCategoryView(request, *args, **kwargs):
+    category = Category.objects.get(name=kwargs["name"])
     if request.method == "PUT":
         serializer = serializers.CategoryDetailSerializer(
             category,

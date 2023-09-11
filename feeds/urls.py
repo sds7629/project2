@@ -1,12 +1,14 @@
-from django.conf.urls import path, include
-from rest_framework.routers import Route
-from rest_framework_nested import routers
+from django.urls import path, include
+
+from rest_framework import routers
+
+# from rest_framework_nested import routers
 from . import views
 
 app_name = "feeds"
 router = routers.SimpleRouter()
-router.register(r"feeds")
+router.register(r"feeds", views.FeedViewSet)
 
 urlpatterns = [
-    path("", include(routers.urls)),
+    path("", include(router.urls)),
 ]
