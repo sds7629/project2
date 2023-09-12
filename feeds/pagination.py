@@ -1,5 +1,9 @@
 from django.core.paginator import InvalidPage
-from rest_framework.pagination import BasePagination, PageNumberPagination
+from rest_framework.pagination import (
+    BasePagination,
+    PageNumberPagination,
+    CursorPagination,
+)
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from collections import OrderedDict
@@ -31,3 +35,10 @@ class CustomPagination(PageNumberPagination):
         return Response(
             OrderedDict([("count", self.page.paginator.count), ("results", data)])
         )
+
+
+# class CursorPagination(CursorPagination):
+#     page_size = 5
+#     cursor_query_param = "page"
+#     page_size_query_param = "page_size"
+#     ordering = "created_at"

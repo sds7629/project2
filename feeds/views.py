@@ -10,8 +10,10 @@ from rest_framework.decorators import action
 from categories.models import Category
 from reviews.models import Review
 from reviews.serializers import ReviewSerializer
+from replies.models import Reply
+from replies.serializers import ReplySerializer
 from . import serializers
-from .permissions import IsWriterorReadOnly
+from .permissions import IsWriterorReadOnly, FeedOrReviewOwnerOnly
 from .pagination import CustomPagination
 from .filters import FeedFilter
 
@@ -50,10 +52,7 @@ class FeedViewSet(viewsets.ModelViewSet):
 
         page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = self.get_serializer(
-                page,
-                many=True,
-            )
+            serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
         serializer = self.get_serializer(queryset, many=True)
@@ -76,13 +75,18 @@ class FeedViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = (
         Review.objects.annotate(
-            nickname=F("writer__nickname"),
+            nickname=F("writer__nickname"), reply_count=Count("replies")
         )
-        .select_related("writer")
+        .select_related("writer", "feed")
+        .prefetch_related("replies")
         .all()
     )
 
-    serializer_class = ReviewSerializer
+    def get_serializer_class(self):
+        if self.action == "post_reply":
+            return ReplySerializer
+        else:
+            return ReviewSerializer
 
     def get_permissions(self):
         permission_classes = []
@@ -93,7 +97,9 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def get_feed_object(self, *args, **kwargs):
-        queryset = Feed.objects.prefetch_related("reviews").all()
+        queryset = (
+            Feed.objects.select_related("writer").prefetch_related("reviews").all()
+        )
         lookup_url_kwarg = "feed_pk"
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         obj = get_object_or_404(queryset, **filter_kwargs)
@@ -109,9 +115,10 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return obj
 
     def list(self, request, *args, **kwargs):
-        feed = self.get_feed_object()
-        review = feed.reviews.all()
-        return Response(ReviewSerializer(review, many=True).data)
+        reviews = Review.objects.annotate(nickname=F("writer__nickname")).filter(
+            feed=kwargs["feed_pk"]
+        )
+        return Response(ReviewSerializer(reviews, many=True).data)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_review_object()
@@ -130,3 +137,14 @@ class ReviewViewSet(viewsets.ModelViewSet):
             return Response(ReviewSerializer(review_data).data)
         else:
             raise ParseError("이미 리뷰를 작성했습니다.")
+
+    @action(methods=["post"], detail=True, permission_classes=[FeedOrReviewOwnerOnly])
+    def post_reply(self, request, **kwargs):
+        review = self.get_review_object()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        reply = serializer.save(
+            writer=request.user,
+            review=review,
+        )
+        return Response(ReplySerializer(reply).data)
