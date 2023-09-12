@@ -5,20 +5,24 @@ from categories.models import Category
 
 class FeedSerializer(serializers.ModelSerializer):
     writer = serializers.SerializerMethodField()
-    category = serializers.CharField(max_length=15)
+    category = serializers.SerializerMethodField()
 
     class Meta:
         model = Feed
         exclude = ("like_users",)
 
     def get_writer(self, obj):
-        return str(obj.writer.nickname)
+        return obj.nickname
+
+    def get_category(self, obj):
+        return obj.kind
 
 
 class FeedDetailSerializer(serializers.ModelSerializer):
     writer = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
     category = serializers.SerializerMethodField()
+    likes = serializers.SerializerMethodField()
 
     class Meta:
         model = Feed
@@ -29,7 +33,10 @@ class FeedDetailSerializer(serializers.ModelSerializer):
         return obj.writer == request.user
 
     def get_writer(self, obj):
-        return str(obj.writer.nickname)
+        return obj.nickname
 
     def get_category(self, obj):
-        return str(obj.category)
+        return obj.kind
+
+    def get_likes(self, obj):
+        return obj.likes_count

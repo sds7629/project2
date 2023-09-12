@@ -1,4 +1,6 @@
 from .models import Feed
+from django.db.models import F
+from django.db.models.aggregates import Count
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.generics import get_object_or_404
@@ -15,7 +17,16 @@ from .filters import FeedFilter
 
 
 class FeedViewSet(viewsets.ModelViewSet):
-    queryset = Feed.objects.select_related("writer").all()
+    queryset = (
+        Feed.objects.annotate(
+            nickname=F("writer__nickname"),
+            kind=F("category__kind"),
+            likes_count=Count("like_users"),
+        )
+        .select_related("writer", "category")
+        .only("writer", "category", "like_users", "title", "content", "is_secret")
+        .prefetch_related("like_users")
+    )
     filterset_class = FeedFilter
     pagination_class = CustomPagination
     order_by = ["-created_at"]
@@ -34,6 +45,20 @@ class FeedViewSet(viewsets.ModelViewSet):
         else:
             return serializers.FeedSerializer
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(
+                page,
+                many=True,
+            )
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
     def create(self, request):
         category_val = request.data.get("category")
         category = Category.objects.get(kind=category_val)
@@ -49,12 +74,26 @@ class FeedViewSet(viewsets.ModelViewSet):
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
-    queryset = Review.objects.select_related("feed").all()
+    queryset = (
+        Review.objects.annotate(
+            nickname=F("writer__nickname"),
+        )
+        .select_related("writer")
+        .all()
+    )
+
     serializer_class = ReviewSerializer
-    permission_classes = [IsWriterorReadOnly]
+
+    def get_permissions(self):
+        permission_classes = []
+        if self.action in ["list", "create"]:
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [IsWriterorReadOnly]
+        return super().get_permissions()
 
     def get_feed_object(self, *args, **kwargs):
-        queryset = Feed.objects.all()
+        queryset = Feed.objects.prefetch_related("reviews").all()
         lookup_url_kwarg = "feed_pk"
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
         obj = get_object_or_404(queryset, **filter_kwargs)
