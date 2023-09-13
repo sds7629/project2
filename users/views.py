@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import ParseError, NotFound, MethodNotAllowed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiParameter
 from . import permissions
 from . import serializers
 
@@ -28,6 +29,11 @@ class UserViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         raise MethodNotAllowed(request.method)
 
+    @extend_schema(
+        tags=["마이페이지"],
+        description="마이페이지",
+        responses=serializers.UserSerializer,
+    )
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         if not instance:
@@ -35,6 +41,25 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
+    @extend_schema(
+        tags=["회원 가입"],
+        description="회원 가입",
+        responses=serializers.CreateUserSerializer,
+        examples=[
+            OpenApiExample(
+                response_only=True,
+                summary="회원 가입",
+                name="Register",
+                value={
+                    "email": "email",
+                    "password": "password",
+                    "nickname": "nickname",
+                    "gender": "gender",
+                    "name": "name",
+                },
+            ),
+        ],
+    )
     def create(self, request, *args, **kwargs):
         serializer = serializers.CreateUserSerializer(data=request.data)
         if serializer.is_valid():
@@ -52,9 +77,19 @@ class UserViewSet(viewsets.ModelViewSet):
             return res
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        tags=["사용안함"],
+        description="시용안함",
+        responses=serializers.UserSerializer,
+    )
     def destroy(self, request, *args, **kwargs):
         return redirect("http://127.0.0.1:8000/api/v1/users/logout")
 
+    @extend_schema(
+        tags=["로그아웃"],
+        description="로그아웃",
+        responses=serializers.UserSerializer,
+    )
     @action(detail=False, methods=["delete"], permission_classes=[IsAuthenticated])
     def logout(self, request, *args, **kwargs):
         if request.user.is_authenticated:
@@ -64,12 +99,33 @@ class UserViewSet(viewsets.ModelViewSet):
             logout(request)
             return res
 
+    @extend_schema(
+        tags=["마이인포"],
+        description="마이인포",
+        responses=serializers.UserSerializer,
+    )
     @action(detail=False)
     def get_info(self, request):
         user = request.user
         serializer = self.get_serializer(user)
         return Response(serializer.data)
 
+    @extend_schema(
+        tags=["로그인"],
+        description="로그인",
+        responses=serializers.UserSerializer,
+        examples=[
+            OpenApiExample(
+                response_only=True,
+                summary="로그인",
+                name="Register",
+                value={
+                    "email": "email",
+                    "password": "password",
+                },
+            ),
+        ],
+    )
     @action(methods=["post"], detail=False, permission_classes=[AllowAny])
     def login(self, request):
         email = request.data.get("email")

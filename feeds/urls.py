@@ -7,7 +7,7 @@ from . import views
 
 router = routers.SimpleRouter()
 router.register("feeds", views.FeedViewSet)
-
+# router.register("review", views.ReviewViewSet)
 review_router = routers.NestedSimpleRouter(
     router,
     r"feeds",
@@ -25,4 +25,5 @@ app_name = "feeds"
 urlpatterns = [
     path("", include(router.urls)),
     path("", include(review_router.urls)),
+    path("updel_reply/<int:reply_pk>/", views.updel_reply),
 ]

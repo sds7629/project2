@@ -3,10 +3,11 @@ from django.db.models import F, Prefetch
 from django.db.models.aggregates import Count
 from rest_framework import viewsets
 from rest_framework.response import Response
+from rest_framework import status
 from rest_framework.generics import get_object_or_404
 from rest_framework.exceptions import NotFound, ParseError
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from categories.models import Category
 from reviews.models import Review
 from reviews.serializers import ReviewSerializer
@@ -16,6 +17,7 @@ from . import serializers
 from .permissions import IsWriterorReadOnly, FeedOrReviewOwnerOnly
 from .pagination import CustomPagination
 from .filters import FeedFilter
+from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiParameter
 
 
 class FeedViewSet(viewsets.ModelViewSet):
@@ -27,7 +29,14 @@ class FeedViewSet(viewsets.ModelViewSet):
         )
         .select_related("writer", "category")
         .only("writer", "category", "like_users", "title", "content", "is_secret")
-        .prefetch_related("like_users")
+        .prefetch_related(
+            Prefetch(
+                "reviews",
+                queryset=Review.objects.annotate(nickname=F("writer__nickname")),
+                to_attr="reviews_review",
+            ),
+            "like_users",
+        )
     )
     filterset_class = FeedFilter
     pagination_class = CustomPagination
@@ -47,6 +56,11 @@ class FeedViewSet(viewsets.ModelViewSet):
         else:
             return serializers.FeedSerializer
 
+    @extend_schema(
+        tags=["피드 리스트"],
+        description="피드 리스트",
+        responses=serializers.FeedSerializer,
+    )
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
 
@@ -58,6 +72,24 @@ class FeedViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        tags=["피드 리스트"],
+        description="피드 저장",
+        responses=serializers.FeedSerializer,
+        examples=[
+            OpenApiExample(
+                response_only=True,
+                summary="피드 저장",
+                name="Feeds",
+                value={
+                    "category": "place",
+                    "title": "제목",
+                    "comment": "내용",
+                    "is_secret": "true or false",
+                },
+            ),
+        ],
+    )
     def create(self, request):
         category_val = request.data.get("category")
         category = Category.objects.get(kind=category_val)
@@ -66,6 +98,11 @@ class FeedViewSet(viewsets.ModelViewSet):
         feed_data = serializer.save(writer=request.user, category=category)
         return Response(serializers.FeedSerializer(feed_data).data)
 
+    @extend_schema(
+        tags=["피드 자세히 보기"],
+        description="피드 자세히 보기",
+        responses=serializers.FeedSerializer,
+    )
     def retrieve(self, request, *args, **kwargs):
         feed = self.get_object()
         serializer = self.get_serializer(feed)
@@ -83,7 +120,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
                 "replies",
                 queryset=Reply.objects.annotate(nickname=F("writer__nickname")).all(),
                 to_attr="review_replies",
-            )
+            ),
         )
         .all()
     )
@@ -120,22 +157,38 @@ class ReviewViewSet(viewsets.ModelViewSet):
         self.check_object_permissions(self.request, obj)
         return obj
 
+    @extend_schema(
+        tags=["리뷰 리스트"],
+        description="리뷰 리스트",
+        responses=serializers.ReviewSerializer,
+    )
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        # datas = queryset.prefetch_related(
-        #     Prefetch(
-        #         "replies",
-        #         queryset=Reply.objects.annotate(nickname=F("writer__nickname")).all(),
-        #         to_attr="review_replies",
-        #     )
-        # )
         return Response(ReviewSerializer(queryset, many=True).data)
 
+    @extend_schema(
+        tags=["리뷰 자세히 보기"],
+        description="리뷰 자세히 보기",
+        responses=serializers.ReviewSerializer,
+    )
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_review_object()
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
+    @extend_schema(
+        tags=["리뷰 저장"],
+        description="리뷰 저장",
+        responses=serializers.ReviewSerializer,
+        examples=[
+            OpenApiExample(
+                response_only=True,
+                summary="리뷰 저장",
+                name="Reviews",
+                value={"comment": "내용"},
+            ),
+        ],
+    )
     def create(self, request, *args, **kwargs):
         feed = self.get_feed_object()
         serializer = ReviewSerializer(data=request.data)
@@ -149,6 +202,19 @@ class ReviewViewSet(viewsets.ModelViewSet):
         else:
             raise ParseError("이미 리뷰를 작성했습니다.")
 
+    @extend_schema(
+        tags=["대댓글 저장"],
+        description="대댓글 저장",
+        responses=ReplySerializer,
+        examples=[
+            OpenApiExample(
+                response_only=True,
+                summary="대댓글 저장",
+                name="Reply",
+                value={"comment": "내용"},
+            ),
+        ],
+    )
     @action(methods=["post"], detail=True, permission_classes=[FeedOrReviewOwnerOnly])
     def post_reply(self, request, **kwargs):
         review = self.get_review_object()
@@ -159,3 +225,32 @@ class ReviewViewSet(viewsets.ModelViewSet):
             review=review,
         )
         return Response(ReplySerializer(reply).data)
+
+
+@extend_schema(
+    tags=["대댓글 수정/삭제"],
+    description="대댓글 수정/삭제",
+    responses=ReplySerializer,
+    examples=[
+        OpenApiExample(
+            response_only=True,
+            summary="대댓글 저장",
+            name="Reply",
+            value={"comment": "내용"},
+        ),
+    ],
+)
+@api_view(["PUT", "DELETE"])
+@permission_classes([FeedOrReviewOwnerOnly])
+def updel_reply(request, reply_pk):
+    if request.method == "PUT":
+        reply = Reply.objects.get(pk=reply_pk)
+        serializer = ReplySerializer(reply, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    if request.method == "DELETE":
+        reply = Reply.objects.get(pk=reply_pk)
+        reply.delete()
+        return Response(status=status.HTTP_404_NOT_FOUND)

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Feed
 from categories.models import Category
+from reviews.serializers import ReviewSerializer
 
 
 class FeedSerializer(serializers.ModelSerializer):
@@ -23,6 +24,7 @@ class FeedDetailSerializer(serializers.ModelSerializer):
     is_owner = serializers.SerializerMethodField()
     category = serializers.SerializerMethodField()
     likes = serializers.SerializerMethodField()
+    reviews = serializers.SerializerMethodField()
 
     class Meta:
         model = Feed
@@ -40,3 +42,16 @@ class FeedDetailSerializer(serializers.ModelSerializer):
 
     def get_likes(self, obj):
         return obj.likes_count
+
+    def get_reviews(self, obj):
+        reviews = []
+        for review in obj.reviews_review:
+            reviews.append(
+                {
+                    "id": review.pk,
+                    "writer": review.nickname,
+                    "content": review.content,
+                    "created": review.created_at,
+                }
+            )
+        return reviews

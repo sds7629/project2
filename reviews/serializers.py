@@ -20,6 +20,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         for reply in obj.review_replies:
             replies.append(
                 {
+                    "id": reply.pk,
                     "writer": reply.nickname,
                     "content": reply.content,
                     "created_at": reply.created_at,
