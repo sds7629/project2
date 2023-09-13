@@ -1,5 +1,5 @@
 from .models import Feed
-from django.db.models import F
+from django.db.models import F, Prefetch
 from django.db.models.aggregates import Count
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -78,7 +78,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
             nickname=F("writer__nickname"), reply_count=Count("replies")
         )
         .select_related("writer", "feed")
-        .prefetch_related("replies")
+        .prefetch_related(
+            Prefetch(
+                "replies",
+                queryset=Reply.objects.annotate(nickname=F("writer__nickname")).all(),
+                to_attr="review_replies",
+            )
+        )
         .all()
     )
 
@@ -115,10 +121,15 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return obj
 
     def list(self, request, *args, **kwargs):
-        reviews = Review.objects.annotate(nickname=F("writer__nickname")).filter(
-            feed=kwargs["feed_pk"]
-        )
-        return Response(ReviewSerializer(reviews, many=True).data)
+        queryset = self.get_queryset()
+        # datas = queryset.prefetch_related(
+        #     Prefetch(
+        #         "replies",
+        #         queryset=Reply.objects.annotate(nickname=F("writer__nickname")).all(),
+        #         to_attr="review_replies",
+        #     )
+        # )
+        return Response(ReviewSerializer(queryset, many=True).data)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_review_object()
