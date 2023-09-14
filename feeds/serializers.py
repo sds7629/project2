@@ -28,7 +28,7 @@ class FeedDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Feed
-        fields = "__all__"
+        exclude = ("like_users",)
 
     def get_is_owner(self, obj):
         request = self.context["request"]

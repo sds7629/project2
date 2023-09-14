@@ -12,9 +12,11 @@ from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiParamete
 from . import permissions
 from . import serializers
 
+User = get_user_model()
+
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = get_user_model().objects.all()
+    queryset = User.objects.all()
     filterset_fields = ("nickname",)
     permission_classes = [AllowAny]
 

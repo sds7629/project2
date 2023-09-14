@@ -1,3 +1,5 @@
+from django.shortcuts import redirect
+from django.contrib.auth import get_user_model
 from .models import Feed
 from django.db.models import F, Prefetch
 from django.db.models.aggregates import Count
@@ -18,6 +20,9 @@ from .permissions import IsWriterorReadOnly, FeedOrReviewOwnerOnly
 from .pagination import CustomPagination
 from .filters import FeedFilter
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiParameter
+
+
+User = get_user_model()
 
 
 class FeedViewSet(viewsets.ModelViewSet):
@@ -254,3 +259,16 @@ def updel_reply(request, reply_pk):
         reply = Reply.objects.get(pk=reply_pk)
         reply.delete()
         return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def likes(request, feed_pk):
+    if request.user.is_authenticated:
+        feed = Feed.objects.get(pk=feed_pk)
+
+        if feed.like_users.filter(pk=request.user.pk).exists():
+            feed.like_users.remove(request.user)
+        else:
+            feed.like_users.add(request.user)
+        return Response({"message": "ok"}, status=status.HTTP_200_OK)

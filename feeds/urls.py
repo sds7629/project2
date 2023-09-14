@@ -25,5 +25,6 @@ app_name = "feeds"
 urlpatterns = [
     path("", include(router.urls)),
     path("", include(review_router.urls)),
+    path("feeds/<int:feed_pk>/likes", views.likes),
     path("updel_reply/<int:reply_pk>/", views.updel_reply),
 ]

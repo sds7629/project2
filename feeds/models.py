@@ -27,6 +27,7 @@ class Feed(Common):
         null=True,
         blank=True,
     )
+    file = models.URLField(null=True, blank=True)
     is_secret = models.BooleanField(default=True)
 
     def __str__(self):
