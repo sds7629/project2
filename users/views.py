@@ -113,7 +113,7 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False)
     def get_info(self, request):
         user = request.user
-        serializer = self.get_serializer(user)
+        serializer = serializers.ListUserSerializer(user)
         return Response(serializer.data)
 
     @extend_schema(
