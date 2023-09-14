@@ -12,7 +12,7 @@ class FeedSerializer(serializers.ModelSerializer):
         exclude = ("like_users",)
 
     def get_writer(self, obj):
-        return obj.nickname
+        return {"nickname": obj.nickname, "profile": obj.profile}
 
     def get_category(self, obj):
         return obj.kind
@@ -49,6 +49,7 @@ class FeedDetailSerializer(serializers.ModelSerializer):
                 {
                     "id": review.pk,
                     "writer": review.nickname,
+                    "profile": review.profile,
                     "content": review.content,
                     "created": review.created_at,
                 }

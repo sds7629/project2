@@ -5,9 +5,9 @@ ENV PYTHONUNBUFFERED=1
 
 RUN apt-get -y update
 
-RUN mkdir /app
-ADD . /app
-WORKDIR /app
+RUN mkdir /app/django
+ADD . /app/django
+WORKDIR /app/django
 
 RUN python -m pip install --upgrade pip
 RUN pip install --upgrade pip

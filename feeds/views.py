@@ -29,6 +29,7 @@ class FeedViewSet(viewsets.ModelViewSet):
     queryset = (
         Feed.objects.annotate(
             nickname=F("writer__nickname"),
+            profile=F("writer__profileImg"),
             kind=F("category__kind"),
             likes_count=Count("like_users"),
         )
@@ -37,7 +38,10 @@ class FeedViewSet(viewsets.ModelViewSet):
         .prefetch_related(
             Prefetch(
                 "reviews",
-                queryset=Review.objects.annotate(nickname=F("writer__nickname")),
+                queryset=Review.objects.annotate(
+                    nickname=F("writer__nickname"),
+                    profile=F("writer__profileImg"),
+                ),
                 to_attr="reviews_review",
             ),
             "like_users",
@@ -117,13 +121,18 @@ class FeedViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = (
         Review.objects.annotate(
-            nickname=F("writer__nickname"), reply_count=Count("replies")
+            nickname=F("writer__nickname"),
+            profile=F("writer__profileImg"),
+            reply_count=Count("replies"),
         )
         .select_related("writer", "feed")
         .prefetch_related(
             Prefetch(
                 "replies",
-                queryset=Reply.objects.annotate(nickname=F("writer__nickname")).all(),
+                queryset=Reply.objects.annotate(
+                    nickname=F("writer__nickname"),
+                    profile=F("writer__profileImg"),
+                ).all(),
                 to_attr="review_replies",
             ),
         )

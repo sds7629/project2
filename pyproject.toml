@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "project2"
+name = "jini_backend"
 version = "0.1.0"
 description = ""
 authors = ["jinwoo <sds7629>"]
