@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import get_user_model
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.hashers import check_password
+from django.db.models import Prefetch
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -9,6 +10,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import ParseError, NotFound, MethodNotAllowed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from drf_spectacular.utils import extend_schema, OpenApiExample, OpenApiParameter
+from feeds.models import Feed
 from . import permissions
 from . import serializers
 
@@ -16,7 +18,9 @@ User = get_user_model()
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
+    queryset = User.objects.prefetch_related(
+        Prefetch("feeds", queryset=Feed.objects.all(), to_attr="my_feeds")
+    ).all()
     filterset_fields = ("nickname",)
     permission_classes = [AllowAny]
 

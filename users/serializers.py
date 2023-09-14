@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import User
-from feeds.serializers import FeedSerializer
 
 
 class ListUserSerializer(serializers.ModelSerializer):
@@ -19,11 +18,13 @@ class ListUserSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    feed = serializers.SerializerMethodField()
+    feeds = serializers.SerializerMethodField()
 
-    def get_feed(self, instance):
-        user = get_user_model().objects.get(nickname=instance.nickname)
-        return FeedSerializer(user.feeds.all(), many=True).data
+    def get_feeds(self, instance):
+        my_feeds = []
+        for feed in instance.my_feeds:
+            my_feeds.append({"pk": feed.pk, "title": feed.title, "file": feed.file})
+            return my_feeds
 
     class Meta:
         model = get_user_model()
@@ -35,6 +36,7 @@ class UserSerializer(serializers.ModelSerializer):
             "password",
             "groups",
             "user_permissions",
+            "last_login",
         )
 
 
