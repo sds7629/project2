@@ -9,6 +9,7 @@ class ListUserSerializer(serializers.ModelSerializer):
         exclude = (
             "created_at",
             "updated_at",
+            "last_login",
             "is_superuser",
             "is_active",
             "password",
@@ -24,7 +25,7 @@ class UserSerializer(serializers.ModelSerializer):
         my_feeds = []
         for feed in instance.my_feeds:
             my_feeds.append({"pk": feed.pk, "title": feed.title, "file": feed.file})
-            return my_feeds
+        return my_feeds
 
     class Meta:
         model = get_user_model()
